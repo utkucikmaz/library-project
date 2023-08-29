@@ -7,8 +7,6 @@ const router = express.Router();
 router.get("/authors", (req, res, next) => {
     Author.find()
         .then((authorsFromDB) => {
-            console.log(authorsFromDB);
-
             const data = {
                 authors: authorsFromDB,
             };
