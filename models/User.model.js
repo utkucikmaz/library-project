@@ -14,6 +14,12 @@ const userSchema = new Schema(
             type: String,
             required: [true, "Password required"],
         },
+        name: {
+            type: String,
+        },
+        surname: {
+            type: String,
+        },
     },
     {
         timestamps: true,

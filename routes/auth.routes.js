@@ -15,7 +15,7 @@ router.get("/signup", (req, res, next) => {
 
 // POST /signup (process form)
 router.post("/signup", (req, res, next) => {
-    const { email, password } = req.body;
+    const { email, password, name, surname } = req.body;
 
     // validation: required fields
     if (!email || !password) {
@@ -43,13 +43,15 @@ router.post("/signup", (req, res, next) => {
             const newUser = {
                 email: email,
                 passwordHash: hash,
+                name: name,
+                surname: surname,
             };
 
             return User.create(newUser);
         })
         .then((userFromDB) => {
             //account created succcessfully
-            res.redirect("/user-profile");
+            res.redirect("/login");
         })
         .catch((error) => {
             console.log("error creating user account... ", error);
@@ -62,14 +64,63 @@ router.post("/signup", (req, res, next) => {
                     errorMessage: "Validation error. Email needs to be unique",
                 });
             } else {
-                console.log("it failed but not a mongoose error....");
                 next(error);
             }
         });
 });
 
+//GET /login
+router.get("/login", (req, res, next) => {
+    res.render("auth/login");
+});
+
+//POST /login
+router.post("/login", (req, res, next) => {
+    const { email, password, name, surname } = req.body;
+
+    if (email === "" || password === "") {
+        res.status(400).render("auth/login", {
+            errorMessage: "Please enter both, email and password to login.",
+        });
+        return;
+    }
+
+    User.findOne({ email: email })
+        .then((user) => {
+            if (!user) {
+                res.status(400).render("auth/login", {
+                    errorMessage:
+                        "Email is not registered. Try with other email.",
+                });
+                return;
+            } else if (bcryptjs.compareSync(password, user.passwordHash)) {
+                req.session.userDetails = user;
+                res.redirect("/user-profile");
+            } else {
+                res.status(400).render("auth/login", {
+                    errorMessage: "Incorrect password.",
+                });
+            }
+        })
+        .catch((error) => {
+            console.log("error trying to login...", error);
+            next(error);
+        });
+});
+
+//POST /logout
+router.post("/logout", (req, res, next) => {
+    req.session.destroy((err) => {
+        if (err) next(err);
+        res.redirect("/");
+    });
+});
+
 router.get("/user-profile", (req, res, next) => {
-    res.render("auth/user-profile");
+    const data = {
+        userDetails: req.session.userDetails,
+    };
+    res.render("auth/user-profile", data);
 });
 
 module.exports = router;
