@@ -1,5 +1,7 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const bcryptjs = require("bcryptjs");
+
 const User = require("../models/User.model");
 
 const router = express.Router();
@@ -14,6 +16,25 @@ router.get("/signup", (req, res, next) => {
 // POST /signup (process form)
 router.post("/signup", (req, res, next) => {
     const { email, password } = req.body;
+
+    // validation: required fields
+    if (!email || !password) {
+        res.status(400).render("auth/signup", {
+            errorMessage:
+                "All fields are mandatory. Please provide your username, email and password.",
+        });
+        return;
+    }
+
+    // validation: pw strength
+    const regex = /(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{6,}/;
+    if (!regex.test(password)) {
+        res.status(400).render("auth/signup", {
+            errorMessage:
+                "Password needs to have at least 6 chars and must contain at least one number, one lowercase and one uppercase letter.",
+        });
+        return;
+    }
 
     bcryptjs
         .genSalt(saltRounds)
@@ -32,7 +53,18 @@ router.post("/signup", (req, res, next) => {
         })
         .catch((error) => {
             console.log("error creating user account... ", error);
-            next(error);
+            if (error instanceof mongoose.Error.ValidationError) {
+                res.status(400).render("auth/signup", {
+                    errorMessage: error.message,
+                });
+            } else if (error.code === 11000) {
+                res.status(400).render("auth/signup", {
+                    errorMessage: "Validation error. Email needs to be unique",
+                });
+            } else {
+                console.log("it failed but not a mongoose error....");
+                next(error);
+            }
         });
 });
 
