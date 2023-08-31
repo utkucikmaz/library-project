@@ -1,6 +1,7 @@
 const express = require("express");
 const Book = require("../models/Book.model");
 const Author = require("../models/Author.model");
+const isLoggedIn = require("../middleware/isLoggedIn");
 
 const router = express.Router();
 
@@ -9,8 +10,6 @@ router.get("/books", (req, res, next) => {
     Book.find()
         .populate("author")
         .then((booksFromDB) => {
-            console.log(booksFromDB);
-
             const data = {
                 books: booksFromDB,
             };
@@ -22,8 +21,9 @@ router.get("/books", (req, res, next) => {
             next(e);
         });
 });
+
 // CREATE: display form
-router.get("/books/create", (req, res, next) => {
+router.get("/books/create", isLoggedIn, (req, res, next) => {
     Author.find()
         .then((authorsFromDB) => {
             const data = {
@@ -38,7 +38,7 @@ router.get("/books/create", (req, res, next) => {
 });
 
 // CREATE: process form
-router.post("/books/create", (req, res, next) => {
+router.post("/books/create", isLoggedIn, (req, res, next) => {
     const newBook = {
         title: req.body.title,
         description: req.body.description,
@@ -57,7 +57,7 @@ router.post("/books/create", (req, res, next) => {
 });
 
 // UPDATE: display form
-router.get("/books/:bookId/edit", async (req, res, next) => {
+router.get("/books/:bookId/edit", isLoggedIn, async (req, res, next) => {
     const { bookId } = req.params;
 
     try {
@@ -75,25 +75,8 @@ router.get("/books/:bookId/edit", async (req, res, next) => {
     }
 });
 
-// const { bookId } = req.params;
-
-// let bookDetails;
-
-// Book.findById(bookId)
-//     .then((bookToEdit) => {
-//         bookDetails = bookToEdit;
-//         return Author.find();
-//     })
-//     .then((authorsFromDB) => {
-//         res.render("books/book-edit.hbs", {
-//             book: bookToEdit,
-//             authorsArray: authorsFromDB,
-//         }); // <-- add this line
-//     })
-//     .catch((error) => next(error));
-
 // UPDATE: process form
-router.post("/books/:bookId/edit", (req, res, next) => {
+router.post("/books/:bookId/edit", isLoggedIn, (req, res, next) => {
     const { bookId } = req.params;
     const { title, description, author, rating } = req.body;
 
@@ -107,8 +90,9 @@ router.post("/books/:bookId/edit", (req, res, next) => {
 });
 
 // DELETE: delete book
-router.post("/books/:bookId/delete", (req, res, next) => {
+router.post("/books/:bookId/delete", isLoggedIn, (req, res, next) => {
     const { bookId } = req.params;
+
     Book.findByIdAndDelete(bookId)
         .then(() => res.redirect("/books"))
         .catch((error) => next(error));
@@ -118,13 +102,12 @@ router.post("/books/:bookId/delete", (req, res, next) => {
 router.get("/books/:bookId", (req, res, next) => {
     const id = req.params.bookId;
     Book.findById(id)
+        .populate("author")
         .then((bookFromDB) => {
             res.render("books/book-details", bookFromDB);
         })
         .catch((e) => {
             console.log("Error getting book details from DB", e);
-            222;
-
             next(e);
         });
 });
